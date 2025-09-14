@@ -105,8 +105,14 @@ void MainWindow::fileProcess(QString fileName) {
         fileData[i] = fileData[i] ^ sett.key[i % sett.key.size()];
         ui->file_progress->setValue(i/fileData.size()*100.0);
     }
+    QString filePath;
+    if (sett.isOverwriting) {
+        filePath = sett.dir2 +"/res_"+fileName;
+    }
+    else {
+        filePath = uniqFileName(sett.dir2 +"/res_"+fileName);
+    }
 
-    QString filePath = uniqFileName(sett.dir2 +"/res_"+fileName);
     QFile res(filePath);
     if (!res.open(QIODevice::WriteOnly)) {
         qDebug() << "Ошибка создания файла:" << file.errorString();
