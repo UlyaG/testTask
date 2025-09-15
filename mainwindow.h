@@ -3,7 +3,8 @@
 
 #include <QMainWindow>
 #include "Settings.h"
-
+#include "taskProcess.h"
+#include <QThread>
 
 
 QT_BEGIN_NAMESPACE
@@ -40,15 +41,19 @@ private slots:
     void on_dir_button_clicked();
 
     void on_dir_button_2_clicked();
-
+signals:
+    void sendTask(Task);
 private:
     Ui::MainWindow *ui;
     Settings sett;
     void fileSearch();
     QStringList files;
     QTimer *Timer;
-    void filesProcess();
+    //void filesProcess();
     void fileProcess(QString);
     QString uniqFileName(QString);
+    QThread* taskProcess;
+    TaskProcess* worker;
+
 };
 #endif // MAINWINDOW_H

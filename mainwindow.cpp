@@ -4,18 +4,27 @@
 #include <QTimer>
 #include <QDir>
 #include <QFileDialog>
-#include <QFile>
-#include <cstdint>
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+
+    QThread* taskProcess = new QThread;
+    worker = new TaskProcess(ui->files_progress, ui->file_progress);
+    worker->moveToThread(taskProcess);
+
+    connect(this, &MainWindow::sendTask, worker, &TaskProcess::getTask);
+    connect(worker, &TaskProcess::processNext, worker, &TaskProcess::startProcessing);
+
+    taskProcess->start();
 }
 
 MainWindow::~MainWindow()
 {
     delete ui;
+    taskProcess->quit();
 }
 
 void MainWindow::on_time_checkBox_clicked(bool checked)
@@ -83,80 +92,10 @@ void MainWindow::fileSearch(){
     else {
         if (sett.needTimer)
             Timer->stop();
-        filesProcess();
+        emit sendTask({sett, files});
+        qDebug() << "Запрос отправлен";
+        //filesProcess();
     }
-}
-
-void MainWindow::fileProcess(QString fileName) {
-    QFile file(sett.dir+'/'+fileName);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qDebug() << sett.dir+fileName;
-        qDebug() << "Ошибка открытия файла:" << file.errorString();
-        return;
-    }
-
-    QByteArray fileData = file.readAll();
-    if (fileData.isEmpty()) {
-        file.close();
-        return;
-    }
-
-    for (int i = 0; i < fileData.size(); i++) {
-        fileData[i] = fileData[i] ^ sett.key[i % sett.key.size()];
-        ui->file_progress->setValue(i/fileData.size()*100.0);
-    }
-    QString filePath;
-    if (sett.isOverwriting) {
-        filePath = sett.dir2 +"/res_"+fileName;
-    }
-    else {
-        filePath = uniqFileName(sett.dir2 +"/res_"+fileName);
-    }
-
-    QFile res(filePath);
-    if (!res.open(QIODevice::WriteOnly)) {
-        qDebug() << "Ошибка создания файла:" << file.errorString();
-    }
-    res.write(fileData);
-    res.close();
-    ui->file_progress->setValue(100.0);
-    file.close();
-    if (sett.needDelete){
-        QFile::remove(sett.dir+fileName);
-    }
-}
-
-QString MainWindow::uniqFileName(QString originalPath) {
-    QFileInfo fileInfo(originalPath);
-    QString baseName = fileInfo.completeBaseName();
-    QString suffix = fileInfo.suffix();
-    QString path = fileInfo.path();
-
-    if (!fileInfo.exists()) {
-        return originalPath;
-    }
-
-    int counter = 1;
-    QString newPath;
-
-    do {
-        newPath = QString("%1/%2_%3.%4")
-        .arg(path)
-            .arg(baseName)
-            .arg(counter)
-            .arg(suffix);
-        counter++;
-    } while (QFileInfo::exists(newPath));
-
-    return newPath;
-}
-
-void MainWindow::filesProcess(){
-    for (int i=0;i<files.size();i++) {
-        fileProcess(files[i]);
-        ui->files_progress->setValue(i/files.size()*100.0);
-    }
-    ui->files_progress->setValue(100);
 }
 
 void MainWindow::on_start_button_clicked()

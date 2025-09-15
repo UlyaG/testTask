@@ -2,7 +2,6 @@
 #define SETTINGS_H
 #include <QApplication>
 #include <QString>
-#include <cstdint>
 
 struct Settings{
     QString mask = ".txt";
